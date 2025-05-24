@@ -1,0 +1,153 @@
+# Install dependencies in Colab/cloud first:
+# !pip install dash dash-bootstrap-components plotly pyngrok
+
+import dash
+from dash import html, dcc, Output, Input
+import dash_bootstrap_components as dbc
+import plotly.graph_objs as go
+
+# If running in Colab:
+try:
+    from pyngrok import ngrok
+    public_url = ngrok.connect(8050)
+    print("App running at:", public_url)
+except:
+    pass
+
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+icons = ['🛡️', '📡', '📍', '📶', '📍', '⚠️', '📈', '📊', '🖥️', '🧩']
+
+# ---- REPLACE/EXTEND DATA BELOW FOR ALL YOUR SESSIONS ----
+# For demo, we'll show 2-3 traces per panel, but you can expand each list to every session you want.
+
+spoofing_sessions = [
+    {"label": "Session #7 (Apr 21)", "time": ['17:45:43','17:45:44','17:45:45','17:45:46','17:45:47'],
+     "rssi": [-35, -63, -35, -62, -35]},
+    {"label": "Session #12 (Apr 24)", "time": ['22:10:00','22:10:01','22:10:02','22:10:03','22:10:04'],
+     "rssi": [-63, -18, -21, -17, -16]},
+]
+jamming_sessions = [
+    {"label": "Session #9 (Mar 3)", "time": ['08:00','08:01','08:02','08:03','08:04'], "interval": [320,317,325,1150,319]},
+    {"label": "Session #16 (May 4)", "time": ['00:35','00:36','00:37','00:38','00:39'], "interval": [318,1160,320,1140,319]},
+]
+movement_sessions = [
+    {"label": "Session #13", "x": [10.2, 9.9, 6.2, 5.2, 4.5], "y": [2.3, 2.1, 4.7, 5.9, 7.1]},
+    {"label": "Session #15", "x": [7.5, 7.0, 6.1, 4.0], "y": [2.0, 4.0, 6.0, 8.0]},
+]
+network_anomaly_sessions = [
+    {"label": "Session #11", "time": ['12:00','12:01','12:02','12:03','12:04'], "ble": [0.12,0.14,0.11,0.42,0.76], "net": [0.10,0.11,0.09,0.15,0.48]},
+    {"label": "Session #18", "time": ['01:59','02:00','02:01','02:02','02:03'], "ble": [0.16,0.10,0.34,0.76,0.13], "net": [0.14,0.09,0.45,0.48,0.12]},
+]
+triangulation_sessions = [
+    {"sensors": [(1,1), (14,1), (7.5,11)], "device": (7,5), "error": [(7.9,5.7),(6.1,4.3)]},
+    {"sensors": [(2,2), (13,2), (7.0,10)], "device": (6,6), "error": [(5.8,6.4),(6.2,5.6)]},
+]
+rivian_vuln_sessions = [
+    {"label": "EDCA201F-33E1", "packetId": list(range(1, 6)), "payloadSize": [20, 18, 22, 19, 21], "encryption": [0, 0, 0, 0, 0]},
+    {"label": "FDF8A1-7E4", "packetId": list(range(1, 6)), "payloadSize": [21, 19, 21, 20, 22], "encryption": [0, 0, 0, 0, 0]},
+]
+detection_performance_sessions = [
+    {"model": "IsolationForest", "precision": 90.5, "recall": 95.2, "f1": 92.8},
+    {"model": "One-Class SVM", "precision": 93.0, "recall": 88.4, "f1": 90.6},
+    {"model": "Autoencoder", "precision": 91.4, "recall": 90.1, "f1": 90.7},
+    {"model": "Ensemble", "precision": 95.8, "recall": 93.9, "f1": 94.8},
+]
+temporal_anomaly_sessions = [
+    {"label": "Session #19", "time": ['02:02:30','02:02:31','02:02:32','02:02:33','02:02:34'],
+     "normal": [1.2,1.0,0.7,1.5,0.9], "fe9f": [1.0,1.0,1.0,1.0,1.0]},
+]
+cross_protocol_sessions = [
+    {"label": "Session #20", "time": ['00:00','00:10','00:20','00:30','00:40'],
+     "networkAnomaly": [0.2,0.3,0.1,0.5,0.8], "bleAnomaly": [0.1,0.1,0.4,0.5,0.7], "correlated": [0.15,0.20,0.25,0.50,0.75]},
+]
+sensor_fusion_sessions = [
+    {"config": "Single Sensor", "falsePositives": 1.2, "coverage": 27, "accuracy": 94.2},
+    {"config": "Two Sensors", "falsePositives": 0.9, "coverage": 45, "accuracy": 95.8},
+    {"config": "Three Sensors", "falsePositives": 0.5, "coverage": 100, "accuracy": 98.7},
+]
+
+insights = [
+    { # 1
+        'title': "Device Spoofing Detection",
+        'description': "Overlay of all spoofing detection sessions.",
+        'icon': icons[0], 'color': "#ef4444",
+        'chart': go.Figure([
+            *[go.Scatter(x=s['time'], y=s['rssi'], mode='lines+markers', name=s['label'], line=dict(width=2), marker=dict(size=7)) for s in spoofing_sessions],
+            go.Scatter(x=spoofing_sessions[0]['time'], y=[-80]*len(spoofing_sessions[0]['time']), mode='lines', name='Signal Switching', line=dict(dash='dot', color='#ef4444'))
+        ]).update_layout(yaxis=dict(range=[-100,-10], title='RSSI (dBm)'), xaxis_title='Time', legend_title="Session")
+    },
+    { # 2
+        'title': "Signal Jamming Attempt",
+        'description': "All advertising interval spike events shown together (jamming).",
+        'icon': icons[1], 'color': "#f97316",
+        'chart': go.Figure([
+            *[go.Scatter(x=s['time'], y=s['interval'], mode='lines+markers', name=s['label'], line=dict(width=2), marker=dict(size=7)) for s in jamming_sessions],
+            go.Scatter(x=jamming_sessions[0]['time'], y=[500]*len(jamming_sessions[0]['time']), mode='lines', name='Normal Threshold', line=dict(dash='dot', color='#f97316'))
+        ]).update_layout(yaxis=dict(range=[250,1300], title='Adv Interval (ms)'), xaxis_title='Time')
+    },
+    { # 3
+        'title': "Suspicious Movement Pattern",
+        'description': "Device movement from all triangulated BLE tracking sessions.",
+        'icon': icons[2], 'color': "#3b82f6",
+        'chart': go.Figure([
+            *[go.Scatter(x=s['x'], y=s['y'], mode='lines+markers', name=s['label'], marker=dict(size=10), line=dict(width=2)) for s in movement_sessions],
+        ]).update_layout(xaxis=dict(range=[0,15], title='X (m)'), yaxis=dict(range=[0,12], title='Y (m)'), legend_title="Session")
+    },
+    { # 4
+        'title': "Network Correlation",
+        'description': "Overlay of BLE/network anomaly scores for each correlated event.",
+        'icon': icons[3], 'color': "#8b5cf6",
+        'chart': go.Figure([
+            *[go.Scatter(x=s['time'], y=s['ble'], mode='lines+markers', name=s['label']+' BLE', line=dict(width=2, color='#8b5cf6')) for s in network_anomaly_sessions],
+            *[go.Scatter(x=s['time'], y=s['net'], mode='lines+markers', name=s['label']+' Net', line=dict(width=2, color='#ec4899')) for s in network_anomaly_sessions],
+            go.Scatter(x=network_anomaly_sessions[0]['time'], y=[0.5]*len(network_anomaly_sessions[0]['time']), mode='lines', name='Alert Threshold', line=dict(dash='dot', color='#ef4444'))
+        ]).update_layout(yaxis=dict(range=[0,1], title='Anomaly Score'), xaxis_title='Time')
+    },
+    { # 5
+        'title': "Triangulation Accuracy",
+        'description': "All real-world 3-sensor BLE triangulations (sensors, device, error).",
+        'icon': icons[4], 'color': "#10b981",
+        'chart': go.Figure([
+            *[go.Scatter(x=[pt[0] for pt in sess['sensors']], y=[pt[1] for pt in sess['sensors']], mode='markers', marker_symbol='triangle-up', marker=dict(size=16), name=f\"Sensors {i+1}\") for i,sess in enumerate(triangulation_sessions)],
+            *[go.Scatter(x=[sess['device'][0]], y=[sess['device'][1]], mode='markers', marker=dict(size=18, color='#10b981'), name=f\"Device {i+1}\") for i,sess in enumerate(triangulation_sessions)],
+            *[go.Scatter(x=[pt[0] for pt in sess['error']], y=[pt[1] for pt in sess['error']], mode='markers', marker=dict(size=12, color='#ef4444', opacity=0.5), name=f\"Error Margin {i+1}\") for i,sess in enumerate(triangulation_sessions)]
+        ]).update_layout(xaxis=dict(range=[0,15], title='X (m)'), yaxis=dict(range=[0,12], title='Y (m)'), legend_title=\"Triangulation\")
+    },
+    { # 6
+        'title': "Rivian Key Vulnerability",
+        'description': "Broadcasts of all detected vulnerable keys, payload and encryption stats.",
+        'icon': icons[5], 'color': "#f59e0b",
+        'chart': go.Figure([
+            *[go.Scatter(x=s['packetId'], y=s['payloadSize'], mode='lines+markers', name=s['label']+' Payload', yaxis='y1', line=dict(width=2)) for s in rivian_vuln_sessions],
+            *[go.Scatter(x=s['packetId'], y=s['encryption'], mode='lines+markers', name=s['label']+' Encryption', yaxis='y2', line=dict(width=2)) for s in rivian_vuln_sessions],
+            go.Scatter(x=rivian_vuln_sessions[0]['packetId'], y=[1]*len(rivian_vuln_sessions[0]['packetId']), mode='lines', name='Min Security', yaxis='y2', line=dict(dash='dot', color='#10b981'))
+        ]).update_layout(yaxis=dict(title='Payload Size', range=[0,32]), yaxis2=dict(title='Encryption', overlaying='y', side='right', range=[0,3]), xaxis=dict(title='Packet ID'))
+    },
+    { # 7
+        'title': "Detection Performance",
+        'description': "ML model detection results for all device types and all sessions.",
+        'icon': icons[6], 'color': "#06b6d4",
+        'chart': go.Figure([
+            go.Bar(x=[s['model'] for s in detection_performance_sessions], y=[s['precision'] for s in detection_performance_sessions], name='Precision'),
+            go.Bar(x=[s['model'] for s in detection_performance_sessions], y=[s['recall'] for s in detection_performance_sessions], name='Recall'),
+            go.Bar(x=[s['model'] for s in detection_performance_sessions], y=[s['f1'] for s in detection_performance_sessions], name='F1 Score'),
+        ]).update_layout(yaxis=dict(title='% (Score)'), barmode='group')
+    },
+    { # 8
+        'title': "Temporal Pattern Anomaly",
+        'description': "FE9F device advertising interval anomalies by session.",
+        'icon': icons[7], 'color': "#8b5cf6",
+        'chart': go.Figure([
+            *[go.Scatter(x=s['time'], y=s['normal'], mode='lines+markers', name=s['label']+' Normal', line=dict(width=2, color='#94a3b8')) for s in temporal_anomaly_sessions],
+            *[go.Scatter(x=s['time'], y=s['fe9f'], mode='lines+markers', name=s['label']+' FE9F', line=dict(width=2, color='#8b5cf6')) for s in temporal_anomaly_sessions]
+        ]).update_layout(yaxis=dict(range=[0,2], title='Device Count'), xaxis_title='Time')
+    },
+    { # 9
+        'title': "Cross-Protocol Attack Surface",
+        'description': "Correlated BLE + network-layer anomaly event overlays.",
+        'icon': icons[8], 'color': "#ec4899",
+        'chart': go.Figure([
+            *[go.Scatter(x=s['time'], y=s['networkAnomaly'], mode='lines+markers', name=s['label']+' Net', line=dict(width=1)) for s in cross_protocol_sessions],
+            *[go.Scatter(x=s['time'], y=s['bleAnomaly'], mode='lines+markers', name=s['label']+' BLE', line=dict(width=1)) for s in cross_protocol_sessions],
+            *[go.Scatter(x=s['time'], y=s['correlated'], mode='lines+markers', name=s['label']+' Corr', line=dict(width=3, color='#ec4899')) for s in cross_protocol_sessions],
+            go.Scatter(x=cross_protocol_sessions[0]['time'], y=[0.5]*len(cross_protocol_sessions[0]['time']), mode='lines', name='Alert Threshold', line=dict(dash='dot', color='#ef4444'))
