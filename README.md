@@ -22,3 +22,11 @@ A forensic dashboard for visualizing and reporting Bluetooth Low Energy (BLE), W
 ```bash
 pip install -r requirements.txt
 python ble_dashboard.py
+
+---
+
+## Security
+
+This project uses [GitHub CodeQL](https://codeql.github.com/) for automated code scanning.
+All pushes and pull requests are analyzed for security vulnerabilities and code quality issues.
+View results in the GitHub repo Security tab.
