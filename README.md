@@ -21,7 +21,8 @@ A forensic dashboard for visualizing and reporting Bluetooth Low Energy (BLE), W
 ## **Quick Start (Local)**
 ```bash
 pip install -r requirements.txt
-python ble_dashboard.py
+python Script
+```
 
 ---
 
