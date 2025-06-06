@@ -14,14 +14,23 @@ A forensic dashboard for visualizing and reporting Bluetooth Low Energy (BLE), W
 
 ## **Requirements**
 - Python 3.8+
-- See `requirements.txt` for dependencies
+- See `Requirements` for dependencies
 
 ---
 
 ## **Quick Start (Local)**
 ```bash
-pip install -r requirements.txt
-python ble_dashboard.py
+pip install -r Requirements
+python app.py
+```
+
+---
+
+## **Live Demo on Render**
+1. Commit the provided `render.yaml` and `app.py` to your repository.
+2. Push to GitHub and create a new web service on [Render](https://render.com/).
+3. Render will automatically install the requirements and start the app using `gunicorn`.
+4. Access the dashboard via the URL provided by Render.
 
 ---
 
