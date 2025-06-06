@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: ble-security-dashboard
+    env: python
+    buildCommand: pip install -r Requirements
+    startCommand: gunicorn app:server --bind 0.0.0.0:$PORT
