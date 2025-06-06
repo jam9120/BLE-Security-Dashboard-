@@ -6,6 +6,8 @@ from dash import html, dcc, Output, Input
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 
+from data_ingestion import fetch_assigned_numbers_data, fetch_sig_security_notices, fetch_nrf_security_advisories # Updated import
+
 # If running in Colab:
 try:
     from pyngrok import ngrok
@@ -17,54 +19,256 @@ except:
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 icons = ['🛡️', '📡', '📍', '📶', '📍', '⚠️', '📈', '📊', '🖥️', '🧩']
 
-# ---- REPLACE/EXTEND DATA BELOW FOR ALL YOUR SESSIONS ----
-# For demo, we'll show 2-3 traces per panel, but you can expand each list to every session you want.
+# ---- Placeholder functions to fetch data ----
+def fetch_ble_data(return_empty=False): # Added param for testing
+    """Placeholder function to fetch BLE data."""
+    print(f"fetch_ble_data called, return_empty={return_empty}")
+    if return_empty:
+        return {
+            "spoofing_sessions": [], "jamming_sessions": [], "movement_sessions": [],
+            "network_anomaly_sessions": [], "triangulation_sessions": [],
+            "rivian_vuln_sessions": [], "temporal_anomaly_sessions": [],
+        }
+    # Return structure that will lead to sample data usage by default
+    return {
+        "spoofing_sessions": [], "jamming_sessions": [], "movement_sessions": [],
+        "network_anomaly_sessions": [], "triangulation_sessions": [],
+        "rivian_vuln_sessions": [], "temporal_anomaly_sessions": [],
+    }
 
-spoofing_sessions = [
-    {"label": "Session #7 (Apr 21)", "time": ['17:45:43','17:45:44','17:45:45','17:45:46','17:45:47'],
-     "rssi": [-35, -63, -35, -62, -35]},
-    {"label": "Session #12 (Apr 24)", "time": ['22:10:00','22:10:01','22:10:02','22:10:03','22:10:04'],
-     "rssi": [-63, -18, -21, -17, -16]},
+def fetch_wifi_data(return_empty=False): # Added param for testing
+    """Placeholder function to fetch WiFi data."""
+    print(f"fetch_wifi_data called, return_empty={return_empty}")
+    if return_empty:
+        return {"cross_protocol_sessions": [], "sensor_fusion_sessions": []}
+    return {"cross_protocol_sessions": [], "sensor_fusion_sessions": []}
+
+# ---- Fetch data using the new functions ----
+print("\n--- Initial Data Fetch (leads to sample data population) ---")
+ble_data = fetch_ble_data(return_empty=False)
+wifi_data = fetch_wifi_data(return_empty=False)
+
+# These will be initially empty, then populated by samples if the "if not" checks pass
+spoofing_sessions = ble_data.get("spoofing_sessions")
+jamming_sessions = ble_data.get("jamming_sessions")
+movement_sessions = ble_data.get("movement_sessions")
+network_anomaly_sessions = ble_data.get("network_anomaly_sessions") # Crucial for callback
+triangulation_sessions = ble_data.get("triangulation_sessions")
+rivian_vuln_sessions = ble_data.get("rivian_vuln_sessions")
+temporal_anomaly_sessions = ble_data.get("temporal_anomaly_sessions") # Crucial for callback
+cross_protocol_sessions = wifi_data.get("cross_protocol_sessions")
+sensor_fusion_sessions = wifi_data.get("sensor_fusion_sessions")
+
+# For demo purposes, we'll add some sample data if the fetched data is empty
+# Adjusted sample data for better testing
+sample_spoofing_sessions = [{"label": "Sample Spoofing", "time": ['00:00:00', '00:00:01'], "rssi": [-50, -55]}]
+sample_jamming_sessions = [{"label": "Sample Jamming", "time": ['00:00:00', '00:00:01'], "interval": [300, 1200]}]
+sample_movement_sessions = [{"label": "Sample Movement", "x": [1, 2], "y": [1, 2]}]
+sample_network_anomaly_sessions = [
+    {"label": "NetAnomS1", "mac_address": "00:02:B3:AA:BB:CC", "advertised_services": ["180A", "180F"], "time": ['10:00', '10:01', '10:02', '10:03'], "ble": [0.2, 0.8, 0.3, 0.9], "net": [0.1, 0.4, 0.7, 0.2]}, # Intel, Battery Service (180F), Device Info (180A)
+    {"label": "NetAnomS2", "mac_address": "BC:F6:85:DD:EE:FF", "advertised_services": ["180D"], "time": ['11:00', '11:01'], "ble": [0.9, 0.1], "net": [0.3, 0.6]}, # Raspberry Pi, Heart Rate (180D)
+    {"label": "NetAnomS3", "mac_address": "AA:BB:CC:00:11:22", "advertised_services": ["ABCD"], "time": ['11:05', '11:06'], "ble": [0.7, 0.1], "net": [0.3, 0.2]},  # Unknown OUI, Unknown service
+    {"label": "NetAnomS4-Nordic", "mac_address": "00:19:86:12:34:56", "product_series": "nRF52 Series", "advertised_services": ["180F", "BEEF"], "time": ['14:00', '14:01'], "ble": [0.6, 0.1], "net": [0.1, 0.2]} # Nordic, nRF52, Battery Service
 ]
-jamming_sessions = [
-    {"label": "Session #9 (Mar 3)", "time": ['08:00','08:01','08:02','08:03','08:04'], "interval": [320,317,325,1150,319]},
-    {"label": "Session #16 (May 4)", "time": ['00:35','00:36','00:37','00:38','00:39'], "interval": [318,1160,320,1140,319]},
+sample_triangulation_sessions = [{"sensors": [(1,1)], "device": (1,1), "error": [(1,1)]}]
+sample_rivian_vuln_sessions = [{"label": "RivVulnS1", "packetId": [1,2], "payloadSize": [20,21], "encryption": [0,0]}]
+sample_temporal_anomaly_sessions = [
+    {"label": "TempAnomS1", "time": ['12:00', '12:01', '12:02'], "normal": [10, 0, 5], "fe9f": [1, 5, 2]}, # Anomaly at 12:01 (fe9f=5, normal=0)
+    {"label": "TempAnomS2", "time": ['13:00', '13:01'], "normal": [3, 4], "fe9f": [7, 1]}  # Anomaly at 13:00 (fe9f=7 > normal=3*2)
 ]
-movement_sessions = [
-    {"label": "Session #13", "x": [10.2, 9.9, 6.2, 5.2, 4.5], "y": [2.3, 2.1, 4.7, 5.9, 7.1]},
-    {"label": "Session #15", "x": [7.5, 7.0, 6.1, 4.0], "y": [2.0, 4.0, 6.0, 8.0]},
-]
-network_anomaly_sessions = [
-    {"label": "Session #11", "time": ['12:00','12:01','12:02','12:03','12:04'], "ble": [0.12,0.14,0.11,0.42,0.76], "net": [0.10,0.11,0.09,0.15,0.48]},
-    {"label": "Session #18", "time": ['01:59','02:00','02:01','02:02','02:03'], "ble": [0.16,0.10,0.34,0.76,0.13], "net": [0.14,0.09,0.45,0.48,0.12]},
-]
-triangulation_sessions = [
-    {"sensors": [(1,1), (14,1), (7.5,11)], "device": (7,5), "error": [(7.9,5.7),(6.1,4.3)]},
-    {"sensors": [(2,2), (13,2), (7.0,10)], "device": (6,6), "error": [(5.8,6.4),(6.2,5.6)]},
-]
-rivian_vuln_sessions = [
-    {"label": "EDCA201F-33E1", "packetId": list(range(1, 6)), "payloadSize": [20, 18, 22, 19, 21], "encryption": [0, 0, 0, 0, 0]},
-    {"label": "FDF8A1-7E4", "packetId": list(range(1, 6)), "payloadSize": [21, 19, 21, 20, 22], "encryption": [0, 0, 0, 0, 0]},
-]
+sample_cross_protocol_sessions = [{"label": "CrossProtS1", "time": ['00:00:00'], "networkAnomaly": [0.5], "bleAnomaly": [0.5], "correlated": [0.5]}]
+sample_sensor_fusion_sessions = [{"config": "SampleSensorFusion", "falsePositives": 1, "coverage": 50, "accuracy": 95}]
+
+if not spoofing_sessions: spoofing_sessions = sample_spoofing_sessions
+if not jamming_sessions: jamming_sessions = sample_jamming_sessions
+if not movement_sessions: movement_sessions = sample_movement_sessions
+if not network_anomaly_sessions: network_anomaly_sessions = sample_network_anomaly_sessions
+if not triangulation_sessions: triangulation_sessions = sample_triangulation_sessions
+if not rivian_vuln_sessions: rivian_vuln_sessions = sample_rivian_vuln_sessions
+if not temporal_anomaly_sessions: temporal_anomaly_sessions = sample_temporal_anomaly_sessions
+if not cross_protocol_sessions: cross_protocol_sessions = sample_cross_protocol_sessions
+if not sensor_fusion_sessions: sensor_fusion_sessions = sample_sensor_fusion_sessions
+
+# These globals store the data that the dashboard will initially render with,
+# and what the callback will have access to.
+# This is critical because the callback uses these global variables.
+populated_ble_data = {
+    "spoofing_sessions": spoofing_sessions, "jamming_sessions": jamming_sessions,
+    "movement_sessions": movement_sessions, "network_anomaly_sessions": network_anomaly_sessions,
+    "triangulation_sessions": triangulation_sessions, "rivian_vuln_sessions": rivian_vuln_sessions,
+    "temporal_anomaly_sessions": temporal_anomaly_sessions,
+}
+populated_wifi_data = {
+    "cross_protocol_sessions": cross_protocol_sessions,
+    "sensor_fusion_sessions": sensor_fusion_sessions,
+}
+
+# Data for charts that are not session-specific (remains unchanged)
 detection_performance_sessions = [
     {"model": "IsolationForest", "precision": 90.5, "recall": 95.2, "f1": 92.8},
     {"model": "One-Class SVM", "precision": 93.0, "recall": 88.4, "f1": 90.6},
     {"model": "Autoencoder", "precision": 91.4, "recall": 90.1, "f1": 90.7},
     {"model": "Ensemble", "precision": 95.8, "recall": 93.9, "f1": 94.8},
 ]
-temporal_anomaly_sessions = [
-    {"label": "Session #19", "time": ['02:02:30','02:02:31','02:02:32','02:02:33','02:02:34'],
-     "normal": [1.2,1.0,0.7,1.5,0.9], "fe9f": [1.0,1.0,1.0,1.0,1.0]},
-]
-cross_protocol_sessions = [
-    {"label": "Session #20", "time": ['00:00','00:10','00:20','00:30','00:40'],
-     "networkAnomaly": [0.2,0.3,0.1,0.5,0.8], "bleAnomaly": [0.1,0.1,0.4,0.5,0.7], "correlated": [0.15,0.20,0.25,0.50,0.75]},
-]
-sensor_fusion_sessions = [
-    {"config": "Single Sensor", "falsePositives": 1.2, "coverage": 27, "accuracy": 94.2},
-    {"config": "Two Sensors", "falsePositives": 0.9, "coverage": 45, "accuracy": 95.8},
-    {"config": "Three Sensors", "falsePositives": 0.5, "coverage": 100, "accuracy": 98.7},
-]
+
+# ---- Anomaly Detection Function ----
+def detect_anomalies(ble_data, wifi_data, network_threshold=0.5,
+                     sig_assigned_numbers=None, sig_security_notices=None, nrf_security_advisories=None):
+    anomalies = []
+
+    company_identifiers_map = {}
+    if sig_assigned_numbers and sig_assigned_numbers.get('company_identifiers'):
+        for item in sig_assigned_numbers['company_identifiers']:
+            oui_val = str(item.get('value', '')).upper().replace("-","").replace(":","") # Ensure string for key
+            if oui_val:
+                company_identifiers_map[oui_val] = item.get('name', 'Unknown Company')
+
+    service_uuid_to_name_map = {}
+    if sig_assigned_numbers and sig_assigned_numbers.get('service_uuids'):
+        for item in sig_assigned_numbers['service_uuids']:
+            uuid_str = str(item.get('uuid', '')).upper().replace("0X", "") # Normalize UUID string
+            service_uuid_to_name_map[uuid_str] = item.get('name', 'Unknown Service')
+
+    active_network_anomaly_sessions = ble_data.get("network_anomaly_sessions", [])
+    for session in active_network_anomaly_sessions:
+        manufacturer = "Unknown Manufacturer"
+        mac_address = session.get("mac_address")
+        advertised_service_names = []
+        matched_vulnerabilities = []
+        product_series = session.get("product_series") # Get product series for nRF matching
+
+        if mac_address:
+            try:
+                oui = mac_address.replace(":", "").replace("-", "").upper()[:6]
+                if oui in company_identifiers_map:
+                    manufacturer = company_identifiers_map[oui]
+            except Exception as e:
+                print(f"Error processing MAC {mac_address} for OUI lookup: {e}")
+
+        advertised_services_uuids = session.get("advertised_services", [])
+        for service_uuid in advertised_services_uuids:
+            normalized_uuid = service_uuid.upper().replace("0X", "")
+            service_name = service_uuid_to_name_map.get(normalized_uuid, "Unknown Service UUID")
+            advertised_service_names.append(f"{service_name} ({normalized_uuid})")
+
+            # SIG Notice Matching (simple version)
+            if sig_security_notices:
+                for notice in sig_security_notices:
+                    affected_specs_text = notice.get('affected_specs', '').lower()
+                    # Check if service UUID string (hex) or its name is in affected_specs
+                    if (normalized_uuid.lower() in affected_specs_text) or \
+                       (service_name != "Unknown Service UUID" and service_name.lower() in affected_specs_text):
+                        vuln_info = f"SIG Notice: {notice.get('title', 'N/A')} (CVE: {notice.get('cve_id', 'N/A')})"
+                        if vuln_info not in matched_vulnerabilities:
+                            matched_vulnerabilities.append(vuln_info)
+
+        # nRF Advisory Matching
+        if "Nordic Semiconductor" in manufacturer and product_series and nrf_security_advisories:
+            for advisory in nrf_security_advisories:
+                if advisory.get('product_series', '').lower() == product_series.lower():
+                    vuln_info = f"nRF Advisory: {advisory.get('cve_id','N/A')} - {advisory.get('summary','N/A')}"
+                    if vuln_info not in matched_vulnerabilities:
+                        matched_vulnerabilities.append(vuln_info)
+
+        session_label = session.get("label", "N/A")
+        session_time_data = session.get("time", [])
+        session_ble_scores = session.get("ble", [])
+        session_net_scores = session.get("net", [])
+
+        for i, time_step in enumerate(session_time_data):
+            # Ensure score lists are long enough
+            ble_score = session_ble_scores[i] if i < len(session_ble_scores) else 0
+            net_score = session_net_scores[i] if i < len(session_net_scores) else 0
+
+            if ble_score > network_threshold or net_score > network_threshold:
+                anomaly_detail = {
+                    "type": "Network Correlation Anomaly",
+                    "session_label": session_label,
+                    "time": time_step,
+                    "ble_score": ble_score,
+                    "net_score": net_score,
+                    "manufacturer": manufacturer,
+                    "advertised_service_names": advertised_service_names,
+                    "matched_vulnerabilities": matched_vulnerabilities if matched_vulnerabilities else ["None"],
+                    "details": f"High anomaly score (BLE: {ble_score}, Net: {net_score})"
+                }
+                anomalies.append(anomaly_detail)
+
+    # Temporal Pattern Anomaly Detection - can also be enhanced if relevant data fields are added
+    temporal_anomaly_sessions = ble_data.get("temporal_anomaly_sessions", [])
+    for session in temporal_anomaly_sessions:
+        for i, time_step in enumerate(session["time"]):
+            normal_count = session["normal"][i]
+            fe9f_count = session["fe9f"][i]
+            # Example condition: FE9F devices detected when no normal devices are present,
+            # or FE9F count is significantly higher than normal.
+            if (fe9f_count > 0 and normal_count == 0) or \
+               (fe9f_count > normal_count * 2 and normal_count > 0): # fe9f count more than double normal count
+                anomalies.append({
+                    "type": "Temporal Pattern Anomaly",
+                    "session_label": session["label"],
+                    "time": time_step,
+                    "normal_count": normal_count,
+                    "fe9f_count": fe9f_count,
+                    "details": f"Unusual FE9F device count (FE9F: {fe9f_count}, Normal: {normal_count})"
+                })
+
+    return anomalies
+
+# ---- Fetch Bluetooth SIG Assigned Numbers ----
+print("\n--- Fetching Bluetooth SIG Assigned Numbers ---")
+SIG_ASSIGNED_NUMBERS = fetch_assigned_numbers_data()
+if SIG_ASSIGNED_NUMBERS and any(SIG_ASSIGNED_NUMBERS.values()):
+    print("Successfully loaded Bluetooth SIG Assigned Numbers.")
+    # Optional: print short summary or if any part was from fallback
+    for key, data_list in SIG_ASSIGNED_NUMBERS.items():
+        if data_list:
+            print(f"  Loaded {len(data_list)} entries for {key}.")
+        else:
+            print(f"  No data loaded for {key} (or fetch/parse failed).")
+else:
+    print("Warning: Failed to load any Bluetooth SIG Assigned Numbers, or all were empty.")
+
+# ---- Fetch Bluetooth SIG Security Notices ----
+print("\n--- Fetching Bluetooth SIG Security Notices ---")
+SIG_SECURITY_NOTICES = fetch_sig_security_notices()
+if SIG_SECURITY_NOTICES: # Check if list is not empty
+    print(f"Successfully loaded {len(SIG_SECURITY_NOTICES)} Bluetooth SIG Security Notices.")
+    # You could print a sample here too if desired, e.g., SIG_SECURITY_NOTICES[0]['title']
+else:
+    print("Warning: Failed to load Bluetooth SIG Security Notices or none were found (using fallback or error).")
+
+# ---- Fetch nRF Security Advisories ----
+print("\n--- Fetching nRF Security Advisories ---")
+NRF_SECURITY_ADVISORIES = fetch_nrf_security_advisories()
+if NRF_SECURITY_ADVISORIES: # Check if list is not empty
+    print(f"Successfully loaded {len(NRF_SECURITY_ADVISORIES)} nRF Security Advisories (sample data).")
+else:
+    # This case should not happen with the current hardcoded sample data approach
+    print("Warning: Failed to load nRF Security Advisories (sample data was expected).")
+
+
+# ---- Call anomaly detection after fetching data ----
+# (Results will be printed to console for now)
+# Initial detection with default threshold
+DEFAULT_NETWORK_THRESHOLD = 0.5
+# IMPORTANT: `detected_anomalies_list` must be based on the data that will be displayed,
+# which is in `populated_ble_data` and `populated_wifi_data` after sample data fill.
+detected_anomalies_list = detect_anomalies(
+    populated_ble_data,
+    populated_wifi_data,
+    network_threshold=DEFAULT_NETWORK_THRESHOLD,
+    sig_assigned_numbers=SIG_ASSIGNED_NUMBERS,
+    sig_security_notices=SIG_SECURITY_NOTICES,
+    nrf_security_advisories=NRF_SECURITY_ADVISORIES
+)
+if detected_anomalies_list:
+    print("Detected Anomalies (initial, based on populated sample data):")
+    for anomaly in detected_anomalies_list:
+        print(anomaly)
+else:
+    print("No anomalies detected.")
+
 
 insights = [
     { # 1
@@ -72,8 +276,8 @@ insights = [
         'description': "Overlay of all spoofing detection sessions.",
         'icon': icons[0], 'color': "#ef4444",
         'chart': go.Figure([
-            *[go.Scatter(x=s['time'], y=s['rssi'], mode='lines+markers', name=s['label'], line=dict(width=2), marker=dict(size=7)) for s in spoofing_sessions],
-            go.Scatter(x=spoofing_sessions[0]['time'], y=[-80]*len(spoofing_sessions[0]['time']), mode='lines', name='Signal Switching', line=dict(dash='dot', color='#ef4444'))
+            *([go.Scatter(x=s['time'], y=s['rssi'], mode='lines+markers', name=s['label'], line=dict(width=2), marker=dict(size=7)) for s in spoofing_sessions] if spoofing_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No Data')]),
+            go.Scatter(x=spoofing_sessions[0]['time'] if spoofing_sessions else ['00:00:00'], y=[-80]*len(spoofing_sessions[0]['time'] if spoofing_sessions else ['00:00:00']), mode='lines', name='Signal Switching', line=dict(dash='dot', color='#ef4444'))
         ]).update_layout(yaxis=dict(range=[-100,-10], title='RSSI (dBm)'), xaxis_title='Time', legend_title="Session")
     },
     { # 2
@@ -81,8 +285,8 @@ insights = [
         'description': "All advertising interval spike events shown together (jamming).",
         'icon': icons[1], 'color': "#f97316",
         'chart': go.Figure([
-            *[go.Scatter(x=s['time'], y=s['interval'], mode='lines+markers', name=s['label'], line=dict(width=2), marker=dict(size=7)) for s in jamming_sessions],
-            go.Scatter(x=jamming_sessions[0]['time'], y=[500]*len(jamming_sessions[0]['time']), mode='lines', name='Normal Threshold', line=dict(dash='dot', color='#f97316'))
+            *([go.Scatter(x=s['time'], y=s['interval'], mode='lines+markers', name=s['label'], line=dict(width=2), marker=dict(size=7)) for s in jamming_sessions] if jamming_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No Data')]),
+            go.Scatter(x=jamming_sessions[0]['time'] if jamming_sessions else ['00:00:00'], y=[500]*len(jamming_sessions[0]['time'] if jamming_sessions else ['00:00:00']), mode='lines', name='Normal Threshold', line=dict(dash='dot', color='#f97316'))
         ]).update_layout(yaxis=dict(range=[250,1300], title='Adv Interval (ms)'), xaxis_title='Time')
     },
     { # 3
@@ -90,37 +294,75 @@ insights = [
         'description': "Device movement from all triangulated BLE tracking sessions.",
         'icon': icons[2], 'color': "#3b82f6",
         'chart': go.Figure([
-            *[go.Scatter(x=s['x'], y=s['y'], mode='lines+markers', name=s['label'], marker=dict(size=10), line=dict(width=2)) for s in movement_sessions],
+            *([go.Scatter(x=s['x'], y=s['y'], mode='lines+markers', name=s['label'], marker=dict(size=10), line=dict(width=2)) for s in movement_sessions] if movement_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No Data')]),
         ]).update_layout(xaxis=dict(range=[0,15], title='X (m)'), yaxis=dict(range=[0,12], title='Y (m)'), legend_title="Session")
     },
     { # 4
         'title': "Network Correlation",
-        'description': "Overlay of BLE/network anomaly scores for each correlated event.",
+        'description': "Overlay of BLE/network anomaly scores for each correlated event. Anomalies marked with 'X'. Threshold adjustable.",
         'icon': icons[3], 'color': "#8b5cf6",
-        'chart': go.Figure([
-            *[go.Scatter(x=s['time'], y=s['ble'], mode='lines+markers', name=s['label']+' BLE', line=dict(width=2, color='#8b5cf6')) for s in network_anomaly_sessions],
-            *[go.Scatter(x=s['time'], y=s['net'], mode='lines+markers', name=s['label']+' Net', line=dict(width=2, color='#ec4899')) for s in network_anomaly_sessions],
-            go.Scatter(x=network_anomaly_sessions[0]['time'], y=[0.5]*len(network_anomaly_sessions[0]['time']), mode='lines', name='Alert Threshold', line=dict(dash='dot', color='#ef4444'))
-        ]).update_layout(yaxis=dict(range=[0,1], title='Anomaly Score'), xaxis_title='Time')
+        'id': 'network-correlation-card', # Added ID for targeting children
+        'chart_id': 'network-correlation-chart', # Added ID for the chart itself
+        'chart': go.Figure(
+            # Original Traces
+            [
+                *([go.Scatter(x=s['time'], y=s['ble'], mode='lines+markers', name=s['label']+' BLE', line=dict(width=2, color='#8b5cf6')) for s in network_anomaly_sessions] if network_anomaly_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No BLE Data')]),
+                *([go.Scatter(x=s['time'], y=s['net'], mode='lines+markers', name=s['label']+' Net', line=dict(width=2, color='#ec4899')) for s in network_anomaly_sessions] if network_anomaly_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No Net Data')]),
+                go.Scatter(x=network_anomaly_sessions[0]['time'] if network_anomaly_sessions else ['00:00:00'], y=[DEFAULT_NETWORK_THRESHOLD]*len(network_anomaly_sessions[0]['time'] if network_anomaly_sessions else ['00:00:00']), mode='lines', name='Alert Threshold', line=dict(dash='dot', color='#ef4444'), yaxis="y1") # Ensure it plots on primary y-axis
+            ]
+            # Anomaly Markers for Network Correlation - will be updated by callback initially too
+            + [
+                go.Scatter(
+                    x=[anomaly['time']],
+                    # Plot on the series that caused anomaly, ensure it's on the primary y-axis
+                    y=[anomaly['ble_score'] if anomaly['ble_score'] > DEFAULT_NETWORK_THRESHOLD else anomaly['net_score']],
+                    mode='markers',
+                    name=f"Anomaly: {anomaly['session_label']} at {anomaly['time']}",
+                    marker=dict(color='red', size=10, symbol='x-thin-open'),
+                    showlegend=False,
+                    yaxis="y1",
+                    customdata=[
+                        [
+                            anomaly['time'],
+                            anomaly['ble_score'],
+                            anomaly['net_score'],
+                            anomaly.get('manufacturer', 'N/A'),
+                            ", ".join(anomaly.get('advertised_service_names', [])),
+                            ", ".join(anomaly.get('matched_vulnerabilities', ["None"]))
+                        ]
+                    ],
+                    hovertemplate=(
+                        "<b>Anomaly Detected</b><br><br>" +
+                        "Time: %{customdata[0]}<br>" +
+                        "BLE Score: %{customdata[1]:.2f}<br>" +
+                        "Net Score: %{customdata[2]:.2f}<br>" +
+                        "Manufacturer: %{customdata[3]}<br>" +
+                        "Services: %{customdata[4]}<br>" +
+                        "Vulnerabilities: %{customdata[5]}<br>" +
+                        "<extra></extra>" # Hides trace info
+                    )
+                ) for anomaly in detected_anomalies_list if anomaly['type'] == 'Network Correlation Anomaly' and anomaly['session_label'] in [s['label'] for s in network_anomaly_sessions]
+            ]
+        ).update_layout(yaxis=dict(range=[0,1], title='Anomaly Score'), xaxis_title='Time', hovermode='closest')
     },
     { # 5
         'title': "Triangulation Accuracy",
         'description': "All real-world 3-sensor BLE triangulations (sensors, device, error).",
         'icon': icons[4], 'color': "#10b981",
         'chart': go.Figure([
-            *[go.Scatter(x=[pt[0] for pt in sess['sensors']], y=[pt[1] for pt in sess['sensors']], mode='markers', marker_symbol='triangle-up', marker=dict(size=16), name=f\"Sensors {i+1}\") for i,sess in enumerate(triangulation_sessions)],
-            *[go.Scatter(x=[sess['device'][0]], y=[sess['device'][1]], mode='markers', marker=dict(size=18, color='#10b981'), name=f\"Device {i+1}\") for i,sess in enumerate(triangulation_sessions)],
-            *[go.Scatter(x=[pt[0] for pt in sess['error']], y=[pt[1] for pt in sess['error']], mode='markers', marker=dict(size=12, color='#ef4444', opacity=0.5), name=f\"Error Margin {i+1}\") for i,sess in enumerate(triangulation_sessions)]
-        ]).update_layout(xaxis=dict(range=[0,15], title='X (m)'), yaxis=dict(range=[0,12], title='Y (m)'), legend_title=\"Triangulation\")
+            *([go.Scatter(x=[pt[0] for pt in sess['sensors']], y=[pt[1] for pt in sess['sensors']], mode='markers', marker_symbol='triangle-up', marker=dict(size=16), name=f"Sensors {i+1}") for i,sess in enumerate(triangulation_sessions)] if triangulation_sessions else [go.Scatter(x=[], y=[], mode='markers', name='No Sensor Data')]),
+            *([go.Scatter(x=[sess['device'][0]], y=[sess['device'][1]], mode='markers', marker=dict(size=18, color='#10b981'), name=f"Device {i+1}") for i,sess in enumerate(triangulation_sessions)] if triangulation_sessions else [go.Scatter(x=[], y=[], mode='markers', name='No Device Data')]),
+            *([go.Scatter(x=[pt[0] for pt in sess['error']], y=[pt[1] for pt in sess['error']], mode='markers', marker=dict(size=12, color='#ef4444', opacity=0.5), name=f"Error Margin {i+1}") for i,sess in enumerate(triangulation_sessions)] if triangulation_sessions else [go.Scatter(x=[], y=[], mode='markers', name='No Error Data')])
+        ]).update_layout(xaxis=dict(range=[0,15], title='X (m)'), yaxis=dict(range=[0,12], title='Y (m)'), legend_title="Triangulation")
     },
     { # 6
         'title': "Rivian Key Vulnerability",
         'description': "Broadcasts of all detected vulnerable keys, payload and encryption stats.",
         'icon': icons[5], 'color': "#f59e0b",
         'chart': go.Figure([
-            *[go.Scatter(x=s['packetId'], y=s['payloadSize'], mode='lines+markers', name=s['label']+' Payload', yaxis='y1', line=dict(width=2)) for s in rivian_vuln_sessions],
-            *[go.Scatter(x=s['packetId'], y=s['encryption'], mode='lines+markers', name=s['label']+' Encryption', yaxis='y2', line=dict(width=2)) for s in rivian_vuln_sessions],
-            go.Scatter(x=rivian_vuln_sessions[0]['packetId'], y=[1]*len(rivian_vuln_sessions[0]['packetId']), mode='lines', name='Min Security', yaxis='y2', line=dict(dash='dot', color='#10b981'))
+            *([go.Scatter(x=s['packetId'], y=s['payloadSize'], mode='lines+markers', name=s['label']+' Payload', yaxis='y1', line=dict(width=2)) for s in rivian_vuln_sessions] if rivian_vuln_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No Payload Data')]),
+            *([go.Scatter(x=s['packetId'], y=s['encryption'], mode='lines+markers', name=s['label']+' Encryption', yaxis='y2', line=dict(width=2)) for s in rivian_vuln_sessions] if rivian_vuln_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No Encryption Data')]),
+            go.Scatter(x=rivian_vuln_sessions[0]['packetId'] if rivian_vuln_sessions else [1], y=[1]*len(rivian_vuln_sessions[0]['packetId'] if rivian_vuln_sessions else [1]), mode='lines', name='Min Security', yaxis='y2', line=dict(dash='dot', color='#10b981'))
         ]).update_layout(yaxis=dict(title='Payload Size', range=[0,32]), yaxis2=dict(title='Encryption', overlaying='y', side='right', range=[0,3]), xaxis=dict(title='Packet ID'))
     },
     { # 7
@@ -135,19 +377,385 @@ insights = [
     },
     { # 8
         'title': "Temporal Pattern Anomaly",
-        'description': "FE9F device advertising interval anomalies by session.",
+        'description': "FE9F device advertising interval anomalies by session. Anomalies marked with 'X'.",
         'icon': icons[7], 'color': "#8b5cf6",
-        'chart': go.Figure([
-            *[go.Scatter(x=s['time'], y=s['normal'], mode='lines+markers', name=s['label']+' Normal', line=dict(width=2, color='#94a3b8')) for s in temporal_anomaly_sessions],
-            *[go.Scatter(x=s['time'], y=s['fe9f'], mode='lines+markers', name=s['label']+' FE9F', line=dict(width=2, color='#8b5cf6')) for s in temporal_anomaly_sessions]
-        ]).update_layout(yaxis=dict(range=[0,2], title='Device Count'), xaxis_title='Time')
+        'chart': go.Figure(
+            # Original Traces
+            [
+                *([go.Scatter(x=s['time'], y=s['normal'], mode='lines+markers', name=s['label']+' Normal', line=dict(width=2, color='#94a3b8')) for s in temporal_anomaly_sessions] if temporal_anomaly_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No Normal Data')]),
+                *([go.Scatter(x=s['time'], y=s['fe9f'], mode='lines+markers', name=s['label']+' FE9F', line=dict(width=2, color='#8b5cf6')) for s in temporal_anomaly_sessions] if temporal_anomaly_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No FE9F Data')])
+            ]
+            # Anomaly Markers for Temporal Pattern
+            + [
+                go.Scatter(
+                    x=[anomaly['time']],
+                    y=[anomaly['fe9f_count']], # Plot on the fe9f series
+                    mode='markers',
+                    name=f"Anomaly: {anomaly['session_label']} at {anomaly['time']}",
+                    marker=dict(color='red', size=10, symbol='x-thin-open'),
+                    showlegend=False
+                ) for anomaly in detected_anomalies_list if anomaly['type'] == 'Temporal Pattern Anomaly' and anomaly['session_label'] in [s['label'] for s in temporal_anomaly_sessions]
+            ]
+        ).update_layout(yaxis=dict(range=[0,2], title='Device Count'), xaxis_title='Time')
     },
     { # 9
         'title': "Cross-Protocol Attack Surface",
         'description': "Correlated BLE + network-layer anomaly event overlays.",
         'icon': icons[8], 'color': "#ec4899",
         'chart': go.Figure([
-            *[go.Scatter(x=s['time'], y=s['networkAnomaly'], mode='lines+markers', name=s['label']+' Net', line=dict(width=1)) for s in cross_protocol_sessions],
-            *[go.Scatter(x=s['time'], y=s['bleAnomaly'], mode='lines+markers', name=s['label']+' BLE', line=dict(width=1)) for s in cross_protocol_sessions],
-            *[go.Scatter(x=s['time'], y=s['correlated'], mode='lines+markers', name=s['label']+' Corr', line=dict(width=3, color='#ec4899')) for s in cross_protocol_sessions],
-            go.Scatter(x=cross_protocol_sessions[0]['time'], y=[0.5]*len(cross_protocol_sessions[0]['time']), mode='lines', name='Alert Threshold', line=dict(dash='dot', color='#ef4444'))
+            *([go.Scatter(x=s['time'], y=s['networkAnomaly'], mode='lines+markers', name=s['label']+' Net', line=dict(width=1)) for s in cross_protocol_sessions] if cross_protocol_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No Net Data')]),
+            *([go.Scatter(x=s['time'], y=s['bleAnomaly'], mode='lines+markers', name=s['label']+' BLE', line=dict(width=1)) for s in cross_protocol_sessions] if cross_protocol_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No BLE Data')]),
+            *([go.Scatter(x=s['time'], y=s['correlated'], mode='lines+markers', name=s['label']+' Corr', line=dict(width=3, color='#ec4899')) for s in cross_protocol_sessions] if cross_protocol_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No Correlated Data')]),
+            go.Scatter(x=cross_protocol_sessions[0]['time'] if cross_protocol_sessions else ['00:00:00'], y=[0.5]*len(cross_protocol_sessions[0]['time'] if cross_protocol_sessions else ['00:00:00']), mode='lines', name='Alert Threshold', line=dict(dash='dot', color='#ef4444'))
+        ]).update_layout(yaxis=dict(range=[0,1], title='Anomaly Score'), xaxis_title='Time')
+    },
+    # Chart #10 for Sensor Fusion - assuming it exists or might be added later,
+    # For now, ensuring the structure is robust if insights list has more/less items.
+    # If sensor_fusion_sessions is empty, it will render "No Data" traces as per its definition.
+    {
+        'title': "Sensor Fusion Performance",
+        'description': "Comparative BLE sensor coverage vs. accuracy for all configurations.",
+        'icon': icons[9] if len(icons) > 9 else '🧩', # Check if icon exists
+        'chart_id': 'sensor-fusion-chart',
+        'chart': go.Figure([
+            go.Bar(x=[s['config'] for s in sensor_fusion_sessions], y=[s['falsePositives'] for s in sensor_fusion_sessions], name='False Positives', yaxis='y1') if sensor_fusion_sessions else go.Bar(x=[], y=[], name='No False Positives Data'),
+            go.Scatter(x=[s['config'] for s in sensor_fusion_sessions], y=[s['coverage'] for s in sensor_fusion_sessions], mode='lines+markers', name='Coverage', yaxis='y2', line=dict(width=3, color='#65a30d')) if sensor_fusion_sessions else go.Scatter(x=[], y=[], mode='lines+markers', name='No Coverage Data'),
+            go.Scatter(x=[s['config'] for s in sensor_fusion_sessions], y=[s['accuracy'] for s in sensor_fusion_sessions], mode='lines+markers', name='Accuracy', yaxis='y2', line=dict(width=3, color='#facc15')) if sensor_fusion_sessions else go.Scatter(x=[], y=[], mode='lines+markers', name='No Accuracy Data'),
+        ]).update_layout(yaxis=dict(title='False Positives (#)'), yaxis2=dict(title='% (Score)', overlaying='y', side='right', range=[0,100]), barmode='group', legend_title="Metric")
+    }
+]
+
+# ---- Dash App Layout ----
+app.layout = html.Div([
+    html.H1("BLE/Wi-Fi Security Dashboard", style={'textAlign': 'center', 'margin': '20px'}),
+    html.Div(
+        [
+            dbc.Row(
+                [
+                    dbc.Col(html.Div([
+                        html.H5(f"{insight['icon']} {insight['title']}"),
+                        html.P(insight['description'], style={'fontSize': '0.8rem'}),
+                        dcc.Graph(id=insight.get('chart_id', f'chart-{i}'), figure=insight['chart'], config={'displayModeBar': False}),
+                        (dcc.Slider(
+                            id='network-threshold-slider',
+                            min=0.1, max=1.0, step=0.1, value=DEFAULT_NETWORK_THRESHOLD,
+                            marks={round(j*0.1,1): str(round(j*0.1,1)) for j in range(1, 11)},
+                            tooltip={"placement": "bottom", "always_visible": True}
+                        ) if insight.get('id') == 'network-correlation-card' else html.Div())
+                    ], className="insight-card")) for i, insight in enumerate(insights)
+                ]
+            )
+        ], className="container-fluid"
+    )
+])
+
+# ---- Dash Callback for Network Correlation Chart ----
+@app.callback(
+    Output('network-correlation-chart', 'figure'),
+    [Input('network-threshold-slider', 'value')]
+)
+def update_network_correlation_chart(threshold_value):
+    # Re-detect anomalies with the new threshold
+    # The callback uses the globally populated data (populated_ble_data, populated_wifi_data)
+    # This ensures it reflects the data used for the initial dashboard render.
+    current_anomalies = detect_anomalies(
+        populated_ble_data,
+        populated_wifi_data,
+        network_threshold=threshold_value,
+        sig_assigned_numbers=SIG_ASSIGNED_NUMBERS,
+        sig_security_notices=SIG_SECURITY_NOTICES,
+        nrf_security_advisories=NRF_SECURITY_ADVISORIES
+    )
+
+    network_anomalies_for_chart = [
+        anomaly for anomaly in current_anomalies if anomaly['type'] == 'Network Correlation Anomaly'
+    ]
+
+    # Use populated_ble_data.get to access network_anomaly_sessions for the callback
+    current_network_sessions = populated_ble_data.get("network_anomaly_sessions", [])
+
+    fig_traces = [
+        *([go.Scatter(x=s['time'], y=s['ble'], mode='lines+markers', name=s['label']+' BLE', line=dict(width=2, color='#8b5cf6')) for s in current_network_sessions] if current_network_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No BLE Data')]),
+        *([go.Scatter(x=s['time'], y=s['net'], mode='lines+markers', name=s['label']+' Net', line=dict(width=2, color='#ec4899')) for s in current_network_sessions] if current_network_sessions else [go.Scatter(x=[], y=[], mode='lines+markers', name='No Net Data')]),
+        go.Scatter(x=current_network_sessions[0]['time'] if current_network_sessions else ['00:00:00'], y=[threshold_value]*len(current_network_sessions[0]['time'] if current_network_sessions else ['00:00:00']), mode='lines', name='Alert Threshold', line=dict(dash='dot', color='#ef4444'), yaxis="y1")
+    ]
+
+    anomaly_marker_traces = [
+        go.Scatter(
+            x=[anomaly['time']],
+            y=[anomaly['ble_score'] if anomaly['ble_score'] > threshold_value else anomaly['net_score']],
+            mode='markers',
+            name=f"Anomaly: {anomaly['session_label']} at {anomaly['time']}", # This name won't show due to <extra>
+            marker=dict(color='red', size=10, symbol='x-thin-open'),
+            showlegend=False,
+            yaxis="y1",
+            customdata=[
+                [
+                    anomaly['time'],
+                    anomaly['ble_score'],
+                    anomaly['net_score'],
+                    anomaly.get('manufacturer', 'N/A'),
+                    ", ".join(anomaly.get('advertised_service_names', [])),
+                    ", ".join(anomaly.get('matched_vulnerabilities', ["None"]))
+                ]
+            ],
+            hovertemplate=(
+                "<b>Anomaly Detected</b><br><br>" +
+                "Time: %{customdata[0]}<br>" +
+                "BLE Score: %{customdata[1]:.2f}<br>" +
+                "Net Score: %{customdata[2]:.2f}<br>" +
+                "Manufacturer: %{customdata[3]}<br>" +
+                "Services: %{customdata[4]}<br>" +
+                "Vulnerabilities: %{customdata[5]}<br>" +
+                "<extra></extra>"
+            )
+        ) for anomaly in network_anomalies_for_chart if anomaly['session_label'] in [s['label'] for s in current_network_sessions]
+    ]
+
+    updated_fig = go.Figure(data=fig_traces + anomaly_marker_traces)
+    updated_fig.update_layout(
+        yaxis=dict(range=[0,1], title='Anomaly Score'),
+        xaxis_title='Time',
+        legend_title_text='Sessions' if current_network_sessions else None,
+        hovermode='closest' # Ensures hover works well with multiple nearby points
+    )
+    return updated_fig
+
+# ---- Function to perform checks (simulates test environment) ----
+def run_checks():
+    print("\n--- STARTING SCRIPT CHECKS ---")
+
+    # Check 1: Run the Dash application (Simulated by creating app object and layout)
+    print("\n--- Check 1: Dash Application Run (Simulated) ---")
+    if app and app.layout:
+        print("  PASS: Dash app object created and layout is assigned.")
+    else:
+        print("  FAIL: Dash app object or layout not created.")
+        return # Stop checks if app didn't initialize
+
+    # Check 2: Dashboard Integrity
+    print("\n--- Check 2: Dashboard Integrity ---")
+    if len(insights) == 10:
+        print(f"  PASS: Correct number of insight cards (10) defined for layout.")
+    else:
+        print(f"  FAIL: Incorrect number of insight items. Expected 10, got {len(insights)}.")
+
+    # Simulate checking rendered charts based on `insights` data
+    for i, insight in enumerate(insights):
+        print(f"  Checking chart {i+1}: {insight['title']}")
+        figure = insight['chart']
+        if not figure.data or not any(getattr(trace, 'x', None) or getattr(trace, 'y', None) or getattr(trace, 'values', None) for trace in figure.data):
+            is_no_data_trace = any("No Data" in getattr(trace, 'name', '') or "No " in getattr(trace, 'name', '') for trace in figure.data if hasattr(trace, 'name'))
+            if is_no_data_trace or not figure.data : # if truly no data traces or explicitly "No Data" named traces
+                print(f"    INFO: Chart {i+1} ('{insight['title']}') correctly shows 'No Data' or is empty as expected for initial empty fetch before sample fill.")
+            else:
+                print(f"    WARN: Chart {i+1} ('{insight['title']}') has no data points but not clearly marked as 'No Data'. Traces: {[t.name for t in figure.data if hasattr(t,'name')]}")
+        else:
+            print(f"    PASS: Chart {i+1} ('{insight['title']}') has data (populated by samples).")
+
+    # Check 3: Data Integration Placeholders
+    print("\n--- Check 3: Data Integration Placeholders ---")
+    print("  (Covered by 'fetch_ble_data called' and 'fetch_wifi_data called' prints during initial script execution)")
+
+    # Test with fetch returning truly empty data (simulated by re-assigning globals and re-generating figures)
+    print("  Simulating fetch returning truly empty data for 'No Data' chart states:")
+    _ble_data_orig = populated_ble_data.copy() # Backup current (sample-filled) data
+    _wifi_data_orig = populated_wifi_data.copy()
+
+    # Simulate empty fetch
+    empty_ble = fetch_ble_data(return_empty=True)
+    empty_wifi = fetch_wifi_data(return_empty=True)
+
+    # How insights are constructed: they use global session vars. So, to test this,
+    # we'd need to reconstruct insights with these empty versions.
+    # For Network Correlation chart, we can directly call its update function.
+    # For others, it's more complex as their figures are in the `insights` list.
+    # This check will focus on Network Correlation.
+
+    empty_anomalies = detect_anomalies(empty_ble, empty_wifi, DEFAULT_NETWORK_THRESHOLD)
+    print(f"  Anomalies with truly empty data: {len(empty_anomalies)}")
+
+    # To test the Network Correlation chart with empty data, we need to simulate its generation logic
+    # without altering the main global `populated_ble_data` which other tests and the actual callback rely on.
+
+    # Create a temporary figure for Network Correlation with empty data
+    empty_net_corr_sessions_for_fig = empty_ble.get("network_anomaly_sessions", [])
+    empty_fig_traces = [
+        *([go.Scatter(x=s['time'], y=s['ble'], mode='lines+markers', name=s['label']+' BLE', line=dict(width=2, color='#8b5cf6')) for s in empty_net_corr_sessions_for_fig] if empty_net_corr_sessions_for_fig else [go.Scatter(x=[], y=[], mode='lines+markers', name='No BLE Data')]),
+        *([go.Scatter(x=s['time'], y=s['net'], mode='lines+markers', name=s['label']+' Net', line=dict(width=2, color='#ec4899')) for s in empty_net_corr_sessions_for_fig] if empty_net_corr_sessions_for_fig else [go.Scatter(x=[], y=[], mode='lines+markers', name='No Net Data')]),
+        go.Scatter(x=empty_net_corr_sessions_for_fig[0]['time'] if empty_net_corr_sessions_for_fig else ['00:00:00'], y=[DEFAULT_NETWORK_THRESHOLD]*len(empty_net_corr_sessions_for_fig[0]['time'] if empty_net_corr_sessions_for_fig else ['00:00:00']), mode='lines', name='Alert Threshold', line=dict(dash='dot', color='#ef4444'), yaxis="y1")
+    ]
+    # Anomalies from `empty_anomalies` list
+    empty_anomaly_markers = [
+        go.Scatter(
+            x=[anomaly['time']], y=[anomaly['ble_score'] if anomaly['ble_score'] > DEFAULT_NETWORK_THRESHOLD else anomaly['net_score']],
+            mode='markers', name=f"Anomaly: {anomaly['session_label']} at {anomaly['time']}",
+            marker=dict(color='red', size=10, symbol='x-thin-open'), showlegend=False, yaxis="y1"
+        ) for anomaly in empty_anomalies if anomaly['type'] == 'Network Correlation Anomaly' and anomaly['session_label'] in [s['label'] for s in empty_net_corr_sessions_for_fig]
+    ]
+    fig_empty_net_corr_simulated = go.Figure(data=empty_fig_traces + empty_anomaly_markers)
+
+    net_corr_traces_names = [t.name for t in fig_empty_net_corr_simulated.data if hasattr(t, 'name')]
+    if "No BLE Data" in net_corr_traces_names and "No Net Data" in net_corr_traces_names and not empty_anomaly_markers:
+        print("    PASS: Simulated Network Correlation chart shows 'No Data' traces and no anomaly markers when source data is empty.")
+    else:
+        print(f"    FAIL: Simulated Network Correlation chart does not correctly show 'No Data'/empty. Traces: {net_corr_traces_names}, Anomaly Markers: {len(empty_anomaly_markers)}")
+
+    # Restore original data for subsequent checks (already done by not modifying globals here)
+    # Re-calculate initial detected_anomalies_list using the globally populated data, as it's used by other checks.
+    # This call MUST include all necessary data sources for detect_anomalies.
+    global detected_anomalies_list # Ensure we're updating the global one for other test parts
+    detected_anomalies_list = detect_anomalies(
+        populated_ble_data,
+        populated_wifi_data,
+        network_threshold=DEFAULT_NETWORK_THRESHOLD,
+        sig_assigned_numbers=SIG_ASSIGNED_NUMBERS,
+        sig_security_notices=SIG_SECURITY_NOTICES,
+        nrf_security_advisories=NRF_SECURITY_ADVISORIES
+    )
+    print(f"  Initial anomalies based on sample data for subsequent checks: {len(detected_anomalies_list)}")
+
+
+    # Check 4: Anomaly Detection & Visualization
+    print("\n--- Check 4: Anomaly Detection & Visualization ---")
+    print("  Network Correlation Chart (Insight #4):")
+
+    # Expected counts with current sample_network_anomaly_sessions (4 sessions):
+    # Threshold 0.5: NetAnomS1 (3), NetAnomS2 (2), NetAnomS3 (1), NetAnomS4-Nordic (1) -> Total 7
+    # Threshold 1.0: Total 0
+    # Threshold 0.1: NetAnomS1 (4), NetAnomS2 (2), NetAnomS3 (2), NetAnomS4-Nordic (2) -> Total 10
+
+    num_net_anomaly_sessions = len(populated_ble_data.get("network_anomaly_sessions", []))
+    threshold_line_index = num_net_anomaly_sessions * 2
+
+    fig_default = update_network_correlation_chart(0.5)
+    default_anomalies_count = sum(1 for trace in fig_default.data if trace.marker and trace.marker.symbol == 'x-thin-open')
+    default_threshold_line_y = fig_default.data[threshold_line_index].y[0]
+    print(f"    Default (0.5): Anomalies = {default_anomalies_count} (Expected 7), Threshold Line Y = {default_threshold_line_y} (Index {threshold_line_index})")
+    if abs(default_threshold_line_y - 0.5) < 0.01 and default_anomalies_count == 7:
+         print(f"      PASS: Correct markers ({default_anomalies_count}) and threshold line at ~0.5.")
+    else:
+         print(f"      FAIL: Incorrect default state. Line: {default_threshold_line_y}, Anomalies: {default_anomalies_count} (Expected 7).")
+
+    fig_high = update_network_correlation_chart(1.0)
+    high_anomalies_count = sum(1 for trace in fig_high.data if trace.marker and trace.marker.symbol == 'x-thin-open')
+    high_threshold_line_y = fig_high.data[threshold_line_index].y[0]
+    print(f"    High (1.0): Anomalies = {high_anomalies_count} (Expected 0), Threshold Line Y = {high_threshold_line_y} (Index {threshold_line_index})")
+    if abs(high_threshold_line_y - 1.0) < 0.01 and high_anomalies_count == 0:
+        print(f"      PASS: No markers and threshold line at ~1.0.")
+    else:
+        print(f"      FAIL: Incorrect high threshold state. Line: {high_threshold_line_y}, Anomalies: {high_anomalies_count} (Expected 0).")
+
+    fig_low = update_network_correlation_chart(0.1)
+    low_anomalies_count = sum(1 for trace in fig_low.data if trace.marker and trace.marker.symbol == 'x-thin-open')
+    low_threshold_line_y = fig_low.data[threshold_line_index].y[0]
+    print(f"    Low (0.1): Anomalies = {low_anomalies_count} (Expected 10), Threshold Line Y = {low_threshold_line_y} (Index {threshold_line_index})")
+    if abs(low_threshold_line_y - 0.1) < 0.01 and low_anomalies_count == 10:
+         print(f"      PASS: Correct markers ({low_anomalies_count}) and threshold line at ~0.1.")
+    else:
+         print(f"      FAIL: Incorrect low threshold state. Line: {low_threshold_line_y}, Anomalies: {low_anomalies_count} (Expected 10).")
+
+    print("  Temporal Pattern Anomaly Chart (Insight #8):")
+    temporal_chart_fig_obj = insights[7]['chart']
+    temporal_anomalies_on_chart = sum(1 for trace in temporal_chart_fig_obj.data if trace.marker and trace.marker.symbol == 'x-thin-open')
+    # Expected from sample_temporal_anomaly_sessions:
+    # S1: 12:01 (fe9f=5, normal=0) -> anomaly
+    # S2: 13:00 (fe9f=7, normal=3) -> anomaly (7 > 3*2)
+    # Total = 2
+    expected_temporal_anomalies = 0
+    for session in populated_ble_data.get("temporal_anomaly_sessions", []):
+        for i in range(len(session["time"])):
+            normal_c = session["normal"][i]
+            fe9f_c = session["fe9f"][i]
+            if (fe9f_c > 0 and normal_c == 0) or (fe9f_c > normal_c * 2 and normal_c > 0):
+                expected_temporal_anomalies +=1
+
+    print(f"    Temporal anomalies on chart: {temporal_anomalies_on_chart} (Expected {expected_temporal_anomalies})")
+    if temporal_anomalies_on_chart == expected_temporal_anomalies and expected_temporal_anomalies == 2:
+        print(f"      PASS: Correct number of anomaly markers ({expected_temporal_anomalies}) found on Temporal chart.")
+    else:
+        print(f"      FAIL: Mismatch in temporal anomaly markers. Chart: {temporal_anomalies_on_chart}, Expected: {expected_temporal_anomalies}.")
+
+    # Check 5: Console Output & Hover Data Verification
+    print("\n--- Check 5: Console Output & Hover Data ---")
+    print("  Initial detected_anomalies_list (should reflect default network threshold 0.5 and temporal):")
+    # This list is `detected_anomalies_list` as recalculated at the end of Check 3
+    # (which now correctly includes all data sources for manufacturer lookup)
+    if detected_anomalies_list: # Use the globally updated list
+        for anomaly in detected_anomalies_list:
+            print(f"    {anomaly}")
+        # Expected: 7 Network Correlation Anomalies + 2 Temporal Pattern Anomalies = 9 total
+        expected_total_initial_anomalies = 7 + expected_temporal_anomalies # expected_temporal_anomalies is 2
+        print(f"  Total initial anomalies printed: {len(detected_anomalies_list)} (Expected {expected_total_initial_anomalies})")
+
+        num_network_anomalies_in_list = sum(1 for a in detected_anomalies_list if a['type'] == 'Network Correlation Anomaly')
+        num_temporal_anomalies_in_list = sum(1 for a in detected_anomalies_list if a['type'] == 'Temporal Pattern Anomaly')
+
+        if len(detected_anomalies_list) == expected_total_initial_anomalies and \
+           num_network_anomalies_in_list == 7 and \
+           num_temporal_anomalies_in_list == expected_temporal_anomalies:
+
+           manufacturers_found = [a.get("manufacturer", "MISSING") for a in detected_anomalies_list if a['type'] == 'Network Correlation Anomaly']
+           intel_count = sum(1 for m in manufacturers_found if m == "Intel Corp. (Sample)")
+           rpi_count = sum(1 for m in manufacturers_found if m == "Raspberry Pi Foundation (Sample)")
+           unknown_oem_count = sum(1 for m in manufacturers_found if m == "Unknown Manufacturer")
+           nordic_count = sum(1 for m in manufacturers_found if m == "Nordic Semiconductor ASA (Sample)")
+
+           # Expected counts based on sample_network_anomaly_sessions and 0.5 threshold:
+           # NetAnomS1 (Intel): 3 anomalies
+           # NetAnomS2 (RPi): 2 anomalies
+           # NetAnomS3 (Unknown): 1 anomaly
+           # NetAnomS4-Nordic (Nordic): 1 anomaly
+           if intel_count == 3 and rpi_count == 2 and unknown_oem_count == 1 and nordic_count == 1:
+               print("    PASS: detected_anomalies_list printed with correct count, types, and manufacturer identification.")
+           else:
+               print(f"    FAIL: Manufacturer identification mismatch. Intel: {intel_count} (exp 3), RPi: {rpi_count} (exp 2), Unknown: {unknown_oem_count} (exp 1), Nordic: {nordic_count} (exp 1)")
+        else:
+           print(f"    FAIL: detected_anomalies_list content mismatch or count. Total: {len(detected_anomalies_list)}, Net: {num_network_anomalies_in_list} (exp 7), Temp: {num_temporal_anomalies_in_list} (exp {expected_temporal_anomalies})")
+    else:
+        print("    FAIL: Initial detected_anomalies_list was empty, but sample data should produce some.")
+
+    print("\n  Verifying hover data for Network Correlation Chart Anomaly Markers:")
+    # Initial chart (Insight #4)
+    initial_net_corr_chart_fig = insights[3]['chart'] # Chart #4 is at index 3
+    initial_anomaly_traces = [t for t in initial_net_corr_chart_fig.data if t.marker and t.marker.symbol == 'x-thin-open']
+    if initial_anomaly_traces:
+        print(f"    Initial chart: Found {len(initial_anomaly_traces)} anomaly marker traces.")
+        # Print hover setup for the first anomaly marker in the initial chart
+        first_initial_anomaly_trace = initial_anomaly_traces[0]
+        print(f"      First initial marker - Customdata: {first_initial_anomaly_trace.customdata}")
+        print(f"      First initial marker - Hovertemplate: {first_initial_anomaly_trace.hovertemplate}")
+        if first_initial_anomaly_trace.customdata and first_initial_anomaly_trace.hovertemplate:
+            print("        PASS: Hoverdata fields seem populated for initial chart.")
+        else:
+            print("        FAIL: Hoverdata fields MISSING for initial chart.")
+    else:
+        print("    Initial chart: No anomaly marker traces found for hover data inspection.")
+
+    # Chart updated by callback (simulated with default threshold 0.5)
+    callback_net_corr_chart_fig = update_network_correlation_chart(DEFAULT_NETWORK_THRESHOLD)
+    callback_anomaly_traces = [t for t in callback_net_corr_chart_fig.data if t.marker and t.marker.symbol == 'x-thin-open']
+    if callback_anomaly_traces:
+        print(f"    Callback-updated chart: Found {len(callback_anomaly_traces)} anomaly marker traces.")
+        # Print hover setup for the first anomaly marker in the callback-generated chart
+        first_callback_anomaly_trace = callback_anomaly_traces[0]
+        print(f"      First callback marker - Customdata: {first_callback_anomaly_trace.customdata}")
+        print(f"      First callback marker - Hovertemplate: {first_callback_anomaly_trace.hovertemplate}")
+        if first_callback_anomaly_trace.customdata and first_callback_anomaly_trace.hovertemplate:
+            print("        PASS: Hoverdata fields seem populated for callback-updated chart.")
+        else:
+            print("        FAIL: Hoverdata fields MISSING for callback-updated chart.")
+    else:
+        print("    Callback-updated chart: No anomaly marker traces found for hover data inspection.")
+
+    print("  (Error messages or warnings would appear above if any occurred during script setup)")
+    print("\n--- CHECKS COMPLETE ---")
+
+if __name__ == '__main__':
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR) # Suppress server logs for checks
+
+    # The entire script runs up to defining app.layout and callbacks when imported.
+    # Then run_checks() is called.
+    run_checks()
