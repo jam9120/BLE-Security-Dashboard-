@@ -12,16 +12,32 @@ A forensic dashboard for visualizing and reporting Bluetooth Low Energy (BLE), W
 
 ---
 
+## **Current Status**
+- The application currently uses `ble_dashboard.py` as the main entry point.
+- Data ingestion (`data_ingestion.py`) relies on fallback sample data for Bluetooth SIG assigned numbers and security notices. This is due to ongoing issues accessing the live external data sources (returning 404/403 errors). This ensures the dashboard remains operational and can display sample insights.
+
+---
+
 ## **Requirements**
 - Python 3.8+
-- See `requirements.txt` for dependencies
+- See `Requirements` for dependencies
 
 ---
 
 ## **Quick Start (Local)**
 ```bash
-pip install -r requirements.txt
+pip install -r Requirements
 python ble_dashboard.py
+```
+
+---
+
+## **Deployment with Gunicorn**
+To run the application with Gunicorn (a production WSGI server), use the following command:
+```bash
+gunicorn ble_dashboard:server -b 0.0.0.0:8050
+```
+Ensure Gunicorn is installed (it's listed in the `Requirements` file). The `server` object is made available in `ble_dashboard.py` for Gunicorn.
 
 ---
 
