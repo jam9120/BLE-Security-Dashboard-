@@ -290,8 +290,6 @@ if __name__ == '__main__':
     else:
         print("\nNo Security Notices data loaded or an error occurred.")
 
-    print("\nNo Security Notices data loaded or an error occurred.")
-
     print("\n--- Testing fetch_nrf_security_advisories ---")
     nrf_advisories = fetch_nrf_security_advisories()
     if nrf_advisories:
