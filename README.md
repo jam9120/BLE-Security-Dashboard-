@@ -46,3 +46,9 @@ Ensure Gunicorn is installed (it's listed in the `Requirements` file). The `serv
 This project uses [GitHub CodeQL](https://codeql.github.com/) for automated code scanning.
 All pushes and pull requests are analyzed for security vulnerabilities and code quality issues.
 View results in the GitHub repo Security tab.
+
+---
+
+## Roadmap
+
+The overall development direction is documented in [ROADMAP.md](ROADMAP.md). It outlines upcoming work such as sensor integration, machine learning models and deployment improvements.
