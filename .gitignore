@@ -1,0 +1,4 @@
+# Ignore dataset contents but keep directories
+rssi-resnet-detector/data/*
+!rssi-resnet-detector/data/*/.gitkeep
+__pycache__/
