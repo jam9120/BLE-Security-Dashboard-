@@ -10,6 +10,7 @@ A forensic dashboard for visualizing and reporting Bluetooth Low Energy (BLE), W
 - Legal/forensic export-ready for court, law enforcement, or expert review
 - Easily deployable locally or on cloud platforms (Render, Google Cloud Run, Replit, etc.)
 
+- RSSI screenshot training pipeline in `rssi-resnet-detector` for anomaly classification
 ---
 
 ## **Current Status**
@@ -29,6 +30,9 @@ A forensic dashboard for visualizing and reporting Bluetooth Low Energy (BLE), W
 pip install -r Requirements
 python ble_dashboard.py
 ```
+## RSSI ResNet Detector
+See `rssi-resnet-detector/README.md` for training a ResNet model on RSSI screenshots.
+
 
 ---
 
