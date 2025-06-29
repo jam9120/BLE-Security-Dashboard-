@@ -52,3 +52,9 @@ View results in the GitHub repo Security tab.
 ## Roadmap
 
 The overall development direction is documented in [ROADMAP.md](ROADMAP.md). It outlines upcoming work such as sensor integration, machine learning models and deployment improvements.
+
+---
+
+## About
+
+Maintained by [jam9120](https://github.com/jam9120). Contributions and feedback are welcome.
