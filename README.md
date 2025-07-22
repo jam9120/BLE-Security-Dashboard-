@@ -45,6 +45,17 @@ Ensure Gunicorn is installed (it's listed in the `Requirements` file). The `serv
 
 ---
 
+## Sensor Packet API
+
+Sensors can stream packets directly to the dashboard via a simple REST API.
+
+- `POST /api/packets` – submit a JSON packet payload.
+- `GET /api/packets?limit=10` – retrieve the most recent packets.
+
+Packets are currently kept in memory.
+
+---
+
 ## Security
 
 This project uses [GitHub CodeQL](https://codeql.github.com/) for automated code scanning.

@@ -1,11 +1,17 @@
 import dash
 from dash import dcc, html
 import dash_bootstrap_components as dbc
-from data_ingestion import fetch_assigned_numbers_data, fetch_sig_security_notices, fetch_nrf_security_advisories
+from data_ingestion import (
+    fetch_assigned_numbers_data,
+    fetch_sig_security_notices,
+    fetch_nrf_security_advisories,
+)
+from packet_api import packet_api
 
 # Initialize the Dash app
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server # Expose server for Gunicorn
+server.register_blueprint(packet_api)
 
 # Fetch data
 assigned_numbers = fetch_assigned_numbers_data()
