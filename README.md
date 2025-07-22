@@ -41,6 +41,32 @@ Ensure Gunicorn is installed (it's listed in the `Requirements` file). The `serv
 
 ---
 
+## Sensor Packet API
+
+Sensors can stream packets directly to the dashboard via a simple REST API.
+
+- `POST /api/packets` – submit a JSON packet payload.
+- `GET /api/packets?limit=10` – retrieve the most recent packets.
+
+Packets are currently kept in memory.
+
+---
+
+## Demo
+
+Start the dashboard locally and run a small client script to post a packet:
+
+```bash
+python ble_dashboard.py  # start the server
+# in another terminal
+python demo_packet_client.py
+```
+
+The demo script sends a sample packet to `POST /api/packets` and prints the
+stored packets using the `GET` endpoint.
+
+---
+
 ## Security
 
 This project uses [GitHub CodeQL](https://codeql.github.com/) for automated code scanning.
