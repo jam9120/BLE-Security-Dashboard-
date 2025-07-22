@@ -16,6 +16,7 @@ and exportable reports suitable for legal or investigative use.
 - Legal/forensic export-ready for court, law enforcement, or expert review
 - Easily deployable locally or on cloud platforms (Render, Google Cloud Run, Replit, etc.)
 
+- RSSI screenshot training pipeline in `rssi-resnet-detector` for anomaly classification
 ---
 
 ## **Current Status**
@@ -35,6 +36,9 @@ and exportable reports suitable for legal or investigative use.
 pip install -r Requirements
 python ble_dashboard.py
 ```
+## RSSI ResNet Detector
+See `rssi-resnet-detector/README.md` for training a ResNet model on RSSI screenshots.
+
 
 ---
 
@@ -44,6 +48,17 @@ To run the application with Gunicorn (a production WSGI server), use the followi
 gunicorn ble_dashboard:server -b 0.0.0.0:8050
 ```
 Ensure Gunicorn is installed (it's listed in the `Requirements` file). The `server` object is made available in `ble_dashboard.py` for Gunicorn.
+
+---
+
+## Sensor Packet API
+
+Sensors can stream packets directly to the dashboard via a simple REST API.
+
+- `POST /api/packets` – submit a JSON packet payload.
+- `GET /api/packets?limit=10` – retrieve the most recent packets.
+
+Packets are currently kept in memory.
 
 ---
 
