@@ -2,6 +2,12 @@
 
 A forensic dashboard for visualizing and reporting Bluetooth Low Energy (BLE), Wi-Fi, and RF anomaly sessions. Built for professional incident response, surveillance investigation, and legal reporting.
 
+## Summary
+
+The dashboard aggregates BLE, Wi-Fi, and other RF session data to surface spoofing,
+jamming, and cross-protocol attacks. It provides interactive charts for analysis
+and exportable reports suitable for legal or investigative use.
+
 ---
 
 ## **Key Features**
@@ -67,3 +73,13 @@ View results in the GitHub repo Security tab.
 ## Roadmap
 
 The overall development direction is documented in [ROADMAP.md](ROADMAP.md). It outlines upcoming work such as sensor integration, machine learning models and deployment improvements.
+
+---
+
+## About
+
+Maintained by [jam9120](https://github.com/jam9120).
+
+jam9120 is a security researcher focused on Bluetooth Low Energy and wireless
+anomaly analytics. This dashboard grew out of work building forensic tools for
+incident responders. Contributions and feedback are welcome.
